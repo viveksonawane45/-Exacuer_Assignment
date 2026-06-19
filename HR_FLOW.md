@@ -16,14 +16,14 @@ screenshots/
 
 Replace these placeholders with screenshots from your ERPNext system.
 
-- screenshots/01_employee.png
-- screenshots/02_attendance.png
-- screenshots/03_leave_application.png
-- screenshots/04_salary_structure.png
-- screenshots/05_salary_structure_assignment.png
-- screenshots/06_payroll_entry.png
-- screenshots/07_salary_slip.png
-- screenshots/08_appraisal.png
+- Employee Setup.png
+- Attendance.png
+- leave application.png
+- Salary assignment.png
+- Salary assignment.png
+- payroll entry.png
+- salary slip.png
+- Appraisal.png
 
 ---
 
