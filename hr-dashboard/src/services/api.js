@@ -9,7 +9,10 @@ const api = axios.create({
 });
 
 export const login = (usr, pwd) => {
-  return api.post("login", { usr, pwd });
+  const params = new URLSearchParams();
+  params.append("usr", usr);
+  params.append("pwd", pwd);
+  return api.post("login", params);
 };
 
 export const logout = () => {
