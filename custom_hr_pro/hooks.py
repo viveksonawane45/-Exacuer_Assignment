@@ -146,20 +146,17 @@ doc_events = {
 
 # Scheduled Tasks
 # ---------------
-
 scheduler_events = {
-	"daily": [
-		"custom_hr_pro.tasks.run_daily_birthday_and_anniversary_alerts"
-	],
 	"cron": {
 		"0 7 * * *": [
-			"custom_hr_pro.tasks.run_daily_birthday_and_anniversary_alerts"
+			"custom_hr_pro.tasks.send_birthday_notifications"
 		],
-		"0 0 25 * *": [
-			"custom_hr_pro.tasks.compile_and_email_payroll_forecast_summary"
+		"0 9 25 * *": [
+			"custom_hr_pro.tasks.send_payroll_summary"
 		]
 	}
 }
+
 
 # Testing
 # -------

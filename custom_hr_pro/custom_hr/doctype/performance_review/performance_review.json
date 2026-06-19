@@ -17,6 +17,7 @@
   "overall_score",
   "live_score_badge",
   "kpis",
+  "kpi_dashboard",
   "dashboard_html_view",
   "amended_from"
  ],
@@ -83,6 +84,11 @@
    "fieldtype": "Table",
    "label": "KPIs",
    "options": "Performance Review KPI"
+  },
+  {
+   "fieldname": "kpi_dashboard",
+   "fieldtype": "HTML",
+   "label": "KPI Dashboard"
   },
   {
    "fieldname": "dashboard_html_view",
