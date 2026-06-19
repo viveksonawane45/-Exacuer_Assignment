@@ -2,11 +2,15 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Performance Review", {
+	onload(frm) {
+		get_previous_score(frm);
+	},
 	refresh(frm) {
 		calculate_live_score(frm);
 	},
 	employee(frm) {
 		if (frm.doc.employee) {
+			get_previous_score(frm);
 			frappe.db.get_value("Employee", frm.doc.employee, "reports_to")
 				.then(r => {
 					let reports_to = r.message.reports_to;
@@ -21,6 +25,8 @@ frappe.ui.form.on("Performance Review", {
 				});
 		} else {
 			frm.set_value("manager_name", "");
+			frm.previous_score = null;
+			calculate_live_score(frm);
 		}
 	}
 });
@@ -43,6 +49,24 @@ frappe.ui.form.on("Performance Review KPI", {
 	}
 });
 
+function get_previous_score(frm) {
+	if (!frm.doc.employee) return;
+	frappe.call({
+		method: "custom_hr_pro.api.review.get_previous_review_score",
+		args: {
+			employee: frm.doc.employee
+		},
+		callback(r) {
+			if (r.message && r.message.length > 0) {
+				frm.previous_score = parseFloat(r.message[0].overall_score || 0);
+			} else {
+				frm.previous_score = 0.0;
+			}
+			calculate_live_score(frm);
+		}
+	});
+}
+
 function calculate_live_score(frm) {
 	let total = 0;
 	let count = 0;
@@ -54,71 +78,123 @@ function calculate_live_score(frm) {
 			}
 		});
 	}
-	let avg = count > 0 ? (total / count).toFixed(2) : "0.00";
-	frm.set_value("overall_score", count > 0 ? total / count : 0);
+	let avg = count > 0 ? (total / count) : 0.0;
+	frm.set_value("overall_score", avg);
 
-	let badge_color = "gray";
-	if (parseFloat(avg) >= 4.0) badge_color = "green";
-	else if (parseFloat(avg) >= 3.0) badge_color = "blue";
-	else if (parseFloat(avg) >= 2.0) badge_color = "orange";
-	else if (parseFloat(avg) > 0) badge_color = "red";
-
-	if (frm.fields_dict.live_score_badge) {
-		frm.fields_dict.live_score_badge.$wrapper.html(`
-			<div style="padding: 12px 18px; border-radius: 6px; background-color: var(--bg-${badge_color}-light, #f4f4f4); border-left: 5px solid var(--border-${badge_color}, #007bff); display: inline-block; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-				<span style="font-weight: 600; font-size: 1.15em; color: var(--text-${badge_color}, #333);">Live Average Score: ${avg}</span>
-			</div>
-		`);
-	}
-
-	render_dashboard(frm);
+	render_kpi_dashboard(frm, avg);
 }
 
-function render_dashboard(frm) {
-	if (!frm.fields_dict.dashboard_html_view) return;
+function render_kpi_dashboard(frm, score) {
+	if (!frm.fields_dict.kpi_dashboard) return;
 
-	if (!frm.doc.kpis || frm.doc.kpis.length === 0) {
-		frm.fields_dict.dashboard_html_view.$wrapper.html(`
-			<div style="padding: 20px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 6px; background-color: var(--bg-light-gray, #fafafa);">
-				No KPIs added yet. Add items to the KPIs grid to view progression chart.
+	let rating_label = "Poor";
+	let badge_color = "#dc3545"; // Red
+
+	if (score >= 2.0) {
+		rating_label = "Average";
+		badge_color = "#fd7e14"; // Orange
+	}
+	if (score >= 3.0) {
+		rating_label = "Good";
+		badge_color = "#007bff"; // Blue
+	}
+	if (score >= 4.5) {
+		rating_label = "Excellent";
+		badge_color = "#28a745"; // Green
+	}
+
+	// Calculate difference comparison
+	let comparison_html = "";
+	if (frm.previous_score !== undefined && frm.previous_score !== null) {
+		let diff = score - frm.previous_score;
+		let diff_symbol = "";
+		let diff_color = "#6c757d";
+
+		if (diff > 0) {
+			diff_symbol = "+";
+			diff_color = "#28a745"; // Green
+		} else if (diff < 0) {
+			diff_color = "#dc3545"; // Red
+		}
+
+		comparison_html = `
+			<div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 12px; padding: 20px; text-align: center; flex: 1;">
+				<h4 style="margin: 0 0 10px 0; color: #6c757d; font-size: 0.9em; text-transform: uppercase;">Previous Review Comparison</h4>
+				<h2 style="margin: 0; font-size: 1.8em; color: #495057;">${frm.previous_score.toFixed(2)}</h2>
+				<p style="margin: 5px 0 0 0; font-weight: bold; color: ${diff_color}; font-size: 0.95em;">
+					Difference: ${diff_symbol}${diff.toFixed(2)}
+				</p>
 			</div>
-		`);
-		return;
+		`;
+	} else {
+		comparison_html = `
+			<div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 12px; padding: 20px; text-align: center; flex: 1;">
+				<h4 style="margin: 0 0 10px 0; color: #6c757d; font-size: 0.9em; text-transform: uppercase;">Previous Review</h4>
+				<h2 style="margin: 0; font-size: 1.2em; color: #6c757d; font-weight: 500; min-height: 44px; display: flex; align-items: center; justify-content: center;">No history found</h2>
+			</div>
+		`;
+	}
+
+	let kpis_html = "";
+	if (frm.doc.kpis && frm.doc.kpis.length > 0) {
+		frm.doc.kpis.forEach((kpi, idx) => {
+			let target = kpi.target_value || 0;
+			let achieved = kpi.achieved_value || 0;
+			let percentage = target > 0 ? Math.min(100, (achieved / target) * 100) : 0;
+			let bar_color = "#007bff"; // Blue
+
+			if (percentage >= 100) bar_color = "#28a745"; // Green
+			else if (percentage >= 75) bar_color = "#17a2b8"; // Cyan
+			else if (percentage >= 50) bar_color = "#ff9800"; // Orange
+			else if (percentage > 0) bar_color = "#dc3545"; // Red
+
+			kpis_html += `
+				<div style="padding: 12px 0; border-bottom: 1px solid #eee;">
+					<div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.95em; font-weight: 500;">
+						<span style="color: #333;">${kpi.goal || `Goal #${idx + 1}`}</span>
+						<span style="color: #666;">${achieved} / ${target} (${percentage.toFixed(0)}%)</span>
+					</div>
+					<div style="width:100%; background:#f1f1f1; border-radius:10px; height:16px; overflow:hidden;">
+						<div style="width:${percentage}%; background:${bar_color}; height:16px; border-radius:10px; text-align:center; color:white; font-size: 0.75em; line-height: 16px; transition: width 0.3s ease;">
+							${percentage > 10 ? `${percentage.toFixed(0)}%` : ""}
+						</div>
+					</div>
+				</div>
+			`;
+		});
+	} else {
+		kpis_html = `
+			<div style="text-align: center; color: #999; padding: 20px 0;">
+				No KPIs added yet. Build the KPI rows to populate progress.
+			</div>
+		`;
 	}
 
 	let html = `
-		<div style="font-family: var(--font-stack-sans); padding: 18px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--card-bg, #fff); box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-top: 10px;">
-			<h4 style="margin-top: 0; margin-bottom: 18px; font-weight: 600; color: var(--text-color, #1f2937); font-size: 1.1em;">KPI Progression Dashboard</h4>
-			<div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
-	`;
-
-	frm.doc.kpis.forEach((kpi, idx) => {
-		let target = kpi.target_value || 0;
-		let achieved = kpi.achieved_value || 0;
-		let percentage = target > 0 ? Math.min(100, Math.round((achieved / target) * 100)) : 0;
-
-		let bar_color = "var(--primary, #007bff)";
-		if (percentage >= 100) bar_color = "var(--green, #28a745)";
-		else if (percentage >= 75) bar_color = "var(--blue, #17a2b8)";
-		else if (percentage >= 50) bar_color = "var(--orange, #fd7e14)";
-		else if (percentage > 0) bar_color = "var(--red, #dc3545)";
-
-		html += `
-			<div style="padding-bottom: 12px; border-bottom: 1px solid var(--border-color, #eaeaea);">
-				<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-					<span style="font-weight: 500; color: var(--text-color, #374151); font-size: 0.95em;">${kpi.goal || `Goal #${idx + 1}`}</span>
-					<span style="font-size: 0.88em; color: var(--text-muted, #6b7280); font-weight: 500;">${achieved} / ${target} (${percentage}%)</span>
+		<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 5px 0;">
+			<div style="display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: wrap;">
+				<!-- Overall Score Card -->
+				<div style="background:${badge_color}; padding:20px; border-radius:12px; color:white; text-align:center; flex: 1; min-width: 150px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+					<h4 style="margin: 0 0 10px 0; color: rgba(255,255,255,0.85); font-size: 0.9em; text-transform: uppercase; font-weight: 600;">Overall Score</h4>
+					<h1 style="margin: 0; font-size: 2.5em; line-height: 1; font-weight: 800;">${score.toFixed(2)}</h1>
+					<h3 style="margin: 5px 0 0 0; font-weight: 700; font-size: 1.1em;">${rating_label}</h3>
 				</div>
-				<div style="width: 100%; background: var(--bg-light-gray, #f3f4f6); height: 8px; border-radius: 4px; overflow: hidden;">
-					<div style="width: ${percentage}%; background: ${bar_color}; height: 100%; border-radius: 4px; transition: width 0.3s ease;"></div>
-				</div>
+				<!-- Comparison Card -->
+				${comparison_html}
 			</div>
-		`;
-	});
-
-	html += `
+			
+			<div style="background: white; border: 1px solid #dee2e6; border-radius: 12px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+				<h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1em; font-weight: 600; color: #333;">KPI Goal Progress Bars</h3>
+				<div style="display: flex; flex-direction: column; gap: 5px;">
+					${kpis_html}
+				</div>
 			</div>
 		</div>
 	`;
-	frm.fields_dict.dashboard_html_view.$wrapper.html(html);
+
+	frm.fields_dict.kpi_dashboard.$wrapper.html(html);
+
+	if (frm.fields_dict.dashboard_html_view) {
+		frm.fields_dict.dashboard_html_view.$wrapper.html(html);
+	}
 }
