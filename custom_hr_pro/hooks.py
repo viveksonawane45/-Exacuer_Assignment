@@ -43,7 +43,7 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {"Leave Application": "public/js/leave_application.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -138,39 +138,33 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Employee": {
+		"validate": "custom_hr_pro.custom_hr.employee_validation.validate_privacy_agreement"
+	}
+}
 
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"custom_hr_pro.tasks.all"
-# 	],
-# 	"daily": [
-# 		"custom_hr_pro.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"custom_hr_pro.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"custom_hr_pro.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"custom_hr_pro.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"custom_hr_pro.tasks.run_daily_birthday_and_anniversary_alerts"
+	],
+	"cron": {
+		"0 7 * * *": [
+			"custom_hr_pro.tasks.run_daily_birthday_and_anniversary_alerts"
+		],
+		"0 0 25 * *": [
+			"custom_hr_pro.tasks.compile_and_email_payroll_forecast_summary"
+		]
+	}
+}
 
 # Testing
 # -------
 
-# before_tests = "custom_hr_pro.install.before_tests"
+before_tests = "custom_hr_pro.install.before_tests"
 
 # Extend DocType Class
 # ------------------------------
@@ -179,6 +173,10 @@ app_license = "mit"
 # extend_doctype_class = {
 # 	"Task": "custom_hr_pro.custom.task.CustomTaskMixin"
 # }
+
+override_doctype_class = {
+	"Leave Application": "custom_hr_pro.custom_hr.override_leave_application.CustomLeaveApplication"
+}
 
 # Overriding Methods
 # ------------------------------
@@ -255,4 +253,8 @@ app_license = "mit"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
+
+fixtures = [
+	{"dt": "Custom Field", "filters": [["dt", "in", ["Employee"]]]}
+]
 
