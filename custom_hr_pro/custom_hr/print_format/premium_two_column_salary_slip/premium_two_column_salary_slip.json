@@ -1,7 +1,7 @@
 {
  "absolute_value": 0,
  "align_labels_right": 0,
- "creation": "2026-06-19 10:49:48.080555",
+ "creation": "2026-06-19 17:21:59.691468",
  "custom_format": 0,
  "disabled": 0,
  "doc_type": "Salary Slip",
@@ -15,7 +15,7 @@
  "margin_left": 15.0,
  "margin_right": 15.0,
  "margin_top": 15.0,
- "modified": "2026-06-19 10:49:48.080555",
+ "modified": "2026-06-19 17:21:59.691468",
  "modified_by": "Administrator",
  "module": "Custom HR",
  "name": "Premium Two-Column Salary Slip",
