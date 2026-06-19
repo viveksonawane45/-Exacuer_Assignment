@@ -39,8 +39,8 @@ def execute(filters=None):
 			COUNT(CASE WHEN att.status = 'Present' THEN 1 END) as present_days,
 			COUNT(CASE WHEN att.status = 'Absent' THEN 1 END) as absent_days,
 			COUNT(CASE WHEN att.status = 'Present' AND att.late_entry = 1 THEN 1 END) as late_arrivals,
-			(SELECT IFNULL(SUM(leave_days), 0) FROM `tabLeave Application` WHERE employee = emp.name AND docstatus = 1 AND leave_type = 'Casual Leave' AND from_date >= %(from_date)s AND to_date <= %(to_date)s) as casual_leave,
-			(SELECT IFNULL(SUM(leave_days), 0) FROM `tabLeave Application` WHERE employee = emp.name AND docstatus = 1 AND leave_type = 'Sick Leave' AND from_date >= %(from_date)s AND to_date <= %(to_date)s) as sick_leave,
+			(SELECT IFNULL(SUM(total_leave_days), 0) FROM `tabLeave Application` WHERE employee = emp.name AND docstatus = 1 AND leave_type = 'Casual Leave' AND from_date >= %(from_date)s AND to_date <= %(to_date)s) as casual_leave,
+			(SELECT IFNULL(SUM(total_leave_days), 0) FROM `tabLeave Application` WHERE employee = emp.name AND docstatus = 1 AND leave_type = 'Sick Leave' AND from_date >= %(from_date)s AND to_date <= %(to_date)s) as sick_leave,
 			(SELECT overall_score FROM `tabPerformance Review` WHERE employee = emp.name AND docstatus = 1 ORDER BY creation DESC LIMIT 1) as latest_score
 		FROM 
 			`tabEmployee` emp
